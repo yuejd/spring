@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<table id="server_list" class="display" cellspacing="0" width="100%">
+	<thead>
+		<tr>
+			<th>Hostname</th>
+			<th>IP</th>
+			<th>Username</th>
+			<th>Password</th>
+			<th>Owner</th>
+			<th>Team</th>
+		</tr>
+	</thead>
+	<tbody>
+		{% for server in servers %}
+		<tr>
+			<td><a href="{% url 'server_detail' server.id %}">{{ server.host_name }}</a></td>
+			<td>{{ server.ip_addr }}</td>
+			<td>{{ server.username }}</td>
+			<td>{{ server.password }}</td>
+			<td>{{ server.owner.name }}</td>
+			<td>{{ server.team.name }}</td>
+		</tr>
+		{% endfor %}
+	</tbody>
+</table>
+{% endblock %}
+{% block js %}
+<script>
+$('#server_list').DataTable();
+</script>
+{% endblock %}
