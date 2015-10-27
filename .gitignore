@@ -58,3 +58,6 @@ target/
 
 #db sqlite
 db.sqlite3
+
+#tag file for ctags
+tags
