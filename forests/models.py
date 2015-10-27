@@ -27,7 +27,6 @@ class Switch(models.Model):
     ip_addr = models.CharField(max_length=15)
     username = models.CharField(max_length=20)
     password = models.CharField(max_length=20)
-    model = models.CharField(max_length=20)
 
 
 class SwitchPort(models.Model):
@@ -48,4 +47,4 @@ class HbaPort(models.Model):
     wwn = models.CharField(max_length=23)
     hba_card = models.ForeignKey('HBA')
     link_down = models.BooleanField()
-    connection = models.ForeignKey('SwitchPort')
+    connection = models.ForeignKey('SwitchPort', null=True)
