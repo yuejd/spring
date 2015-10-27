@@ -40,6 +40,7 @@ class HBA(models.Model):
     vendor = models.CharField(max_length=20)
     wwn = models.CharField(max_length=23)
     model = models.CharField(max_length=20)
+    server = models.ForeignKey('Server', default=None)
 
 
 class HbaPort(models.Model):
