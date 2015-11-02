@@ -19,6 +19,7 @@ class Server(models.Model):
     owner = models.ForeignKey('Employee')
     team = models.ForeignKey('Team')
     os = models.CharField(max_length=20, default=None)
+    updated = models.DateTimeField(auto_now=True, null=True)
 
 
 class Switch(models.Model):
@@ -43,7 +44,6 @@ class HBA(models.Model):
 
 
 class HbaPort(models.Model):
-    updated = models.DateTimeField(auto_now=True)
     wwn = models.CharField(max_length=23)
     hba_card = models.ForeignKey('HBA')
     link_down = models.BooleanField()
