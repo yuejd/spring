@@ -1,0 +1,51 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+  <h1>{{ server.host_name }}</h1>
+</div>
+<div class="row">
+  <h2>
+    <span class="label label-primary">{{ server.team.name }} Team</span>
+    <span class="label label-info">{{ server.owner.name }}</span>
+  </h2>
+</div>
+<div class="row">
+  <h2>HBA Info</h2>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>WWN</th>
+          <th>Model</th>
+          <th>Link Status</th>
+          <th>Switch</th>
+          <th>Switch Port</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hba in server.hba_set.all %}
+          {% for port in hba.hbaport_set.all %}
+        <tr>
+          <td>{{ port.wwn }}</td>
+          <td>{{ port.hba_card.model }}</td>
+          {% if port.link_down %}
+          <td>LinkDown</td>
+          <td> --- </td>
+          <td> --- </td>
+          {% else %}
+          <td>LinkUp</td>
+          <td>{{ port.connection.switch.name }}</td>
+          <td>{{ port.connection.port_index }}</td>
+          {% endif %}
+        </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="pull-right">
+    <p>Last Updated: {{ server.updated | date:"Y-m-d H:i:s" }}</p>
+  </div>
+</div>
+{% endblock %}

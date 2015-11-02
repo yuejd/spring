@@ -12,10 +12,17 @@ def server_list(request):
 
 
 class ServerDetail(View):
-	def get(self, request):
-		# TODO add more code here
-		return None
+    def get(self, request, server_id):
+        try:
+            server = Server.objects.get(pk=server_id)
+        except Server.DoesnotExist:
+            return render(request, '404.html')
 
-	def post(self, request):
-		# TODO add more code here
-		return None
+        return render(
+            request,
+            "forests/server_detail.html",
+            {'server': server}
+            )
+
+    def post(self, request):
+        return None
