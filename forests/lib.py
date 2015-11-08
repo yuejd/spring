@@ -1,5 +1,7 @@
 import threading
 import queue
+import winrm
+import json
 
 
 def get_server_info(server):
@@ -11,7 +13,7 @@ def get_server_info(server):
     # the folder ready only to the hosts.
     guess.put({
         'type': 'windows',
-        'script': 'c:\scripts\GetWinInfo.ps1',
+        'script': 'C:\scripts\Get-HBAWin.ps1'
         })
     guess.put({
         'type': 'linux',
@@ -20,25 +22,37 @@ def get_server_info(server):
 
     def _get_info(task):
         if task['type'] == 'windows':
-            # run scripts via pywinrm
-            pass
+            s = winrm.Session(
+                server.ip_addr,
+                auth=(server.username, server.password)
+                )
+            try:
+                r = s.run_ps(task['script'])
+            except:
+                # TODO put the exception detail into log
+                return None
+            if r.status_code == 0:
+                json_str = r.std_out.rstrip("\\r\\n'").lstrip("b'")
+                return json.loads(json_str)
+
         elif task['type'] == 'linux':
-            # run scripts via paramiko
+            # TODO add paramiko part here!
             pass
         return None
 
     def worker():
-        new_info = threading.local()
-        task = guess.get()
-        new_info = _get_info(task)
-        if new_info:
-            # convert it into JSON object
-            info.append(new_info)
-        guess.task_done
+        while True:
+            task = guess.get()
+            new_info = threading.local()
+            new_info.res = _get_info(task)
+            if new_info.res:
+                info.append(new_info.res)
+            guess.task_done()
 
     for x in range(2):
         t = threading.Thread(target=worker)
         t.daemon = True
         t.start()
 
+    guess.join()
     return info
