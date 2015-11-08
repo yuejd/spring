@@ -12,13 +12,13 @@ class Employee(models.Model):
 
 
 class Server(models.Model):
-    host_name = models.CharField(max_length=20)
+    host_name = models.CharField(max_length=20, null=True)
     ip_addr = models.CharField(max_length=15)
     username = models.CharField(max_length=20)
     password = models.CharField(max_length=20)
-    owner = models.ForeignKey('Employee')
-    team = models.ForeignKey('Team')
-    os = models.CharField(max_length=20, default=None)
+    owner = models.ForeignKey('Employee', null=True)
+    team = models.ForeignKey('Team', null=True)
+    os = models.CharField(max_length=20, default=None, null=True)
     updated = models.DateTimeField(auto_now=True, null=True)
 
 
