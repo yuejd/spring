@@ -13,7 +13,11 @@ def get_server_info(server):
     # the folder ready only to the hosts.
     guess.put({
         'type': 'windows',
-        'script': 'C:\scripts\Get-HBAWin.ps1'
+        'mount_point': 'k',
+        'shared': '\\\\10.103.118.1\\linux\\NWC\\script\\windows',
+        'shared_usr': 'linux',
+        'shared_psw': 'linux',
+        'script': 'Get-HBAWin.ps1'
         })
     guess.put({
         'type': 'linux',
@@ -27,12 +31,22 @@ def get_server_info(server):
                 auth=(server.username, server.password)
                 )
             try:
-                r = s.run_ps(task['script'])
+                # mount and execute the script
+                # do not split these two actions cause the mount is only
+                # available for this session
+                r = s.run_ps(
+                    'net use ' + task['mount_point'] + ': ' +
+                    task['shared'] + ' /user:' +
+                    task['shared_usr'] + ' ' + task['shared_psw'] + '; ' +
+                    task['mount_point'] + ':\\' + task['script']
+                    )
+                # umount
+                s.run_ps('net use ' + task['mount_point'] + ': /delete')
             except:
                 # TODO put the exception detail into log
                 return None
             if r.status_code == 0:
-                json_str = r.std_out.rstrip("\\r\\n'").lstrip("b'")
+                json_str = r.std_out[r.std_out.find('['):r.std_out.find(']')+1]
                 return json.loads(json_str)
 
         elif task['type'] == 'linux':
