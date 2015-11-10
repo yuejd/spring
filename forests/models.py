@@ -37,14 +37,17 @@ class SwitchPort(models.Model):
 
 
 class HBA(models.Model):
-    vendor = models.CharField(max_length=20)
-    wwn = models.CharField(max_length=23)
     model = models.CharField(max_length=20)
+    description = models.CharField(max_length=200, null=True)
+    driver_name = models.CharField(max_length=20, null=True)
+    driver_version = models.CharField(max_length=20, null=True)
+    firmware_version = models.CharField(max_length=20, null=True)
+    serial_number = models.CharField(max_length=50)
     server = models.ForeignKey('Server', default=None)
 
 
 class HbaPort(models.Model):
-    wwn = models.CharField(max_length=23)
+    wwpn = models.CharField(max_length=23)
     hba_card = models.ForeignKey('HBA')
-    link_down = models.BooleanField()
+    link_down = models.NullBooleanField()
     connection = models.ForeignKey('SwitchPort', null=True)
