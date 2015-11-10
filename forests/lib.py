@@ -47,6 +47,8 @@ def get_server_info(server):
                 return None
             if r.status_code == 0:
                 json_str = r.std_out[r.std_out.find('['):r.std_out.find(']')+1]
+                # fix a problem caused by winrm
+                json_str = json_str.replace("\'b\'", "")
                 return json.loads(json_str)
 
         elif task['type'] == 'linux':

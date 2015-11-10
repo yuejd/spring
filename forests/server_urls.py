@@ -7,4 +7,6 @@ urlpatterns = [
     url(r'^(?P<server_id>[0-9]+)$',
         views.ServerDetail.as_view(),
         name='server_detail'),
+    url(r'^(?P<server_id>[0-9]+)/resync',
+        views.server_resync),
 ]

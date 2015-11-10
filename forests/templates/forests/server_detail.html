@@ -16,7 +16,7 @@
     <table class="table table-striped">
       <thead>
         <tr>
-          <th>WWN</th>
+          <th>WWPN</th>
           <th>Model</th>
           <th>Link Status</th>
           <th>Switch</th>
@@ -27,7 +27,7 @@
         {% for hba in server.hba_set.all %}
           {% for port in hba.hbaport_set.all %}
         <tr>
-          <td>{{ port.wwn }}</td>
+          <td>{{ port.wwpn }}</td>
           <td>{{ port.hba_card.model }}</td>
           {% if port.link_down %}
           <td>LinkDown</td>
