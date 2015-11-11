@@ -72,3 +72,7 @@ def get_server_info(server):
 
     guess.join()
     return info
+
+def get_connection_info(wwpn):
+    # TODO find the connection info for the wwpn
+    pass
