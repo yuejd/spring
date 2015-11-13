@@ -51,6 +51,7 @@ def server_resync(request, server_id):
             else:
                 port.link_down = 1
             port.save()
+            server.save()
     try:
         server = Server.objects.get(pk=server_id)
     except Server.DoesnotExist:
