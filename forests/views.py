@@ -32,21 +32,22 @@ class ServerDetail(View):
 
 def server_resync(request, server_id):
     def _sync(server, data):
+        server.hba_set.all().delete()
         for hba_port_info in data:
             hba = HBA.objects.get_or_create(
-                serial_number=hba_port_info['SerialNumber'],
+                serial_number=hba_port_info.get('SerialNumber'),
                 server=server)[0]
-            hba.description = hba_port_info['ModelDescription']
-            hba.driver_name = hba_port_info['DriverName']
-            hba.driver_version = hba_port_info['DriverVersion']
-            hba.firmware_version = hba_port_info['FirmwareVersion']
-            hba.model = hba_port_info['Model']
+            hba.description = hba_port_info.get('ModelDescription')
+            hba.driver_name = hba_port_info.get('DriverName')
+            hba.driver_version = hba_port_info.get('DriverVersion')
+            hba.firmware_version = hba_port_info.get('FirmwareVersion')
+            hba.model = hba_port_info.get('Model')
             hba.server = server
             hba.save()
             port = HbaPort.objects.get_or_create(
-                wwpn=hba_port_info['WWPN'],
+                wwpn=hba_port_info.get('WWPN'),
                 hba_card=hba)[0]
-            if hba_port_info['Active']:
+            if hba_port_info.get('Active'):
                 port.link_down = 0
             else:
                 port.link_down = 1

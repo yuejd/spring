@@ -2,6 +2,9 @@ import threading
 import queue
 import winrm
 import json
+import paramiko
+from django.conf import settings
+import os
 
 
 def get_server_info(server):
@@ -21,7 +24,7 @@ def get_server_info(server):
         })
     guess.put({
         'type': 'linux',
-        'script': '/scripts/get_info.py',
+        'script': 'linux_hba_info.sh',
         })
 
     def _get_info(task):
@@ -52,8 +55,28 @@ def get_server_info(server):
                 return json.loads(json_str)
 
         elif task['type'] == 'linux':
-            # TODO add paramiko part here!
-            pass
+            linux_sshc = paramiko.client.SSHClient()
+            linux_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                linux_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            (i, o, e) = linux_sshc.exec_command(
+                open(os.path.join(
+                    settings.SCRIPTS_DIR,
+                    task['script']), 'r').read()
+                )
+            linux_info = o.read()
+            if linux_info:
+                linux_info = linux_info.decode('utf-8').replace(",\n]", "\n]")
+                return json.loads(linux_info)
         return None
 
     def worker():
