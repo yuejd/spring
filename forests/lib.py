@@ -5,6 +5,7 @@ import json
 import paramiko
 from django.conf import settings
 import os
+import re
 
 
 def get_server_info(server):
@@ -95,3 +96,37 @@ def get_server_info(server):
 
     guess.join()
     return info
+
+
+def nodefind(switch, wwpns):
+    connections = []
+    sshc = paramiko.client.SSHClient()
+    sshc.set_missing_host_key_policy(
+        paramiko.client.AutoAddPolicy()
+    )
+    try:
+        sshc.connect(
+            switch.ip_addr,
+            username=switch.username,
+            password=switch.password
+        )
+    except:
+        # TODO put the exception detail into log
+        return None
+
+    if switch.vendor == 'cisco':
+        cmd = "show fcns database detail | grep -B 2 -A 14 "
+        for wwpn in wwpns:
+            (i, o, e) = sshc.exec_command(cmd + wwpn)
+            info = o.read().decode('utf-8')
+            if info:
+                connections.append({
+                    'WWPN': wwpn,
+                    'SW_IP': re.search('(?<=\()\d+(\.\d+){3}', info).group(),
+                    'Port': re.search(r'(?<=:).*(?=\nSwitch)', info).group(),
+                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
+                })
+    elif switch.vendor == 'brocade':
+        pass
+
+    return connections
