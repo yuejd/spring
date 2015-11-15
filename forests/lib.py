@@ -127,6 +127,24 @@ def nodefind(switch, wwpns):
                     'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
                 })
     elif switch.vendor == 'brocade':
-        pass
+        cmd = "nodefind "
+        for wwpn in wwpns:
+            (i, o, e) = sshc.exec_command(cmd + wwpn)
+            info = o.read().decode('utf-8')
+            if "No device found" not in info:
+                temp = {
+                    'WWPN': wwpn,
+                    'Port': re.search(r'(?<=Port Index: )\d+', info).group()
+                    }
+                sw_id = re.search(r'\d{2}(?=\d{4};)', info).group()
+                (i, o, e) = sshc.exec_command("switchshow")
+                info = o.read().decode('utf-8')
+                if info:
+                    temp['VSAN'] = re.search(r'(?<=FID: )\d+', info).group()
+                (i, o, e) = sshc.exec_command("fabricshow | grep fffc" + sw_id)
+                info = o.read().decode('utf-8')
+                if info:
+                    temp['SW_IP'] = re.search('\d+(\.\d+){3}', info).group()
+                    connections.append(temp)
 
     return connections
