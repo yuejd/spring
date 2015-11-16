@@ -6,15 +6,12 @@ import paramiko
 from django.conf import settings
 import os
 import re
+from forests.models import Switch
 
 
 def get_server_info(server):
     info = []
     guess = queue.Queue()
-    # call ansible API to deploy the scripts in the future but now we
-    # assumed that the scripts were already deployed.
-    # maybe we can use a share folder to hold all the scripts and then mount
-    # the folder ready only to the hosts.
     guess.put({
         'type': 'windows',
         'mount_point': 'k',
@@ -98,7 +95,7 @@ def get_server_info(server):
     return info
 
 
-def nodefind(switch, wwpns):
+def _nodefind(switch, wwpns):
     connections = []
     sshc = paramiko.client.SSHClient()
     sshc.set_missing_host_key_policy(
@@ -134,9 +131,9 @@ def nodefind(switch, wwpns):
             if "No device found" not in info:
                 temp = {
                     'WWPN': wwpn,
-                    'Port': re.search(r'(?<=Port Index: )\d+', info).group()
+                    'Port': re.search(r'(?<=Port Index: )\w+', info).group()
                     }
-                sw_id = re.search(r'\d{2}(?=\d{4};)', info).group()
+                sw_id = re.search(r'\w{2}(?=\w{4};)', info).group()
                 (i, o, e) = sshc.exec_command("switchshow")
                 info = o.read().decode('utf-8')
                 if info:
@@ -145,6 +142,46 @@ def nodefind(switch, wwpns):
                 info = o.read().decode('utf-8')
                 if info:
                     temp['SW_IP'] = re.search('\d+(\.\d+){3}', info).group()
+                    temp['SW_USR'] = switch.username
                     connections.append(temp)
 
     return connections
+
+
+def get_connection_info(wwpns):
+    info = []
+    # ----switch queue setup start
+    switches = queue.Queue()
+    try:
+        switches.put(
+            Switch.objects.get(
+                ip_addr="10.108.104.124",
+                username="user_platform"
+            )
+        )  # fid40
+
+        switches.put(
+            Switch.objects.get(
+                ip_addr="10.108.104.13",
+                username="emc"
+            )
+        )  # VSAN 2140
+    except Switch.DoesNotExist:
+        return None
+
+    # ----switch queue setup done
+
+    def worker():
+        while True:
+            switch = switches.get()
+            for item in _nodefind(switch, wwpns):
+                info.append(item)
+            switches.task_done()
+
+    for x in range(20):
+        t = threading.Thread(target=worker)
+        t.daemon = True
+        t.start()
+
+    switches.join()
+    return info
