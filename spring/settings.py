@@ -107,3 +107,17 @@ STATICFILES_DIRS = (
 )
 
 SCRIPTS_DIR = os.path.join(BASE_DIR, "scripts")
+
+NODEFIND_SCOPE = (
+    {'ip': "10.108.104.124", 'username': "user_platform"},   # fid40
+    {'ip': "10.108.104.123", 'username': "user_vplexa"},     # fid5
+    {'ip': "10.108.104.122", 'username': "user_vplexb"},     # fid10
+    {'ip': "10.108.104.121", 'username': "user_symmetrix"},  # fid128 in x86,
+    {'ip': "10.108.179.33", 'username': "user_symmetrix"},   # fid128 in unix
+    {'ip': "10.103.116.49", 'username': "cd"},  # fid98
+    {'ip': "10.108.179.33", 'username': "hp"},  # fid100
+    {'ip': "10.103.116.38", 'username': "emc"},  # cisco aix vsan 110
+    {'ip': "10.108.104.13", 'username': "emc"},  # cisco x86
+    {'ip': "10.108.178.27", 'username': "emc"},  # cisco hp 100
+    {'ip': "10.103.116.33", 'username': "admin"},  # cisco hp vsan 1
+)

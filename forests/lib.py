@@ -152,22 +152,18 @@ def get_connection_info(wwpns):
     info = []
     # ----switch queue setup start
     switches = queue.Queue()
-    try:
-        switches.put(
-            Switch.objects.get(
-                ip_addr="10.108.104.124",
-                username="user_platform"
-            )
-        )  # fid40
 
-        switches.put(
-            Switch.objects.get(
-                ip_addr="10.108.104.13",
-                username="emc"
+    for entry in settings.NODEFIND_SCOPE:
+        try:
+            switches.put(
+                Switch.objects.get(
+                    ip_addr=entry.get('ip'),
+                    username=entry.get('username')
+                )
             )
-        )  # VSAN 2140
-    except Switch.DoesNotExist:
-        return None
+        except Switch.DoesNotExist:
+            # TODO add log
+            pass
 
     # ----switch queue setup done
 
