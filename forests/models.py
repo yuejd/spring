@@ -23,17 +23,17 @@ class Server(models.Model):
 
 
 class Switch(models.Model):
-    name = models.CharField(max_length=20)
-    vendor = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, null=True)
+    vendor = models.CharField(max_length=20, null=True)
     ip_addr = models.CharField(max_length=15)
     username = models.CharField(max_length=20)
-    password = models.CharField(max_length=20)
+    password = models.CharField(max_length=20, null=True)
+    vf_vsan = models.CharField(max_length=10, null=True)
 
 
 class SwitchPort(models.Model):
     switch = models.ForeignKey('Switch')
-    port_index = models.IntegerField()
-    vf_vsan = models.IntegerField()
+    port_index = models.CharField(max_length=10, null=True)
 
 
 class HBA(models.Model):

@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from forests.models import Server, HBA, HbaPort
+from forests.models import Server, HBA, HbaPort, Switch, SwitchPort
 from django.views.generic import View
-from forests.lib import get_server_info
+from forests.lib import get_server_info, get_connection_info
 from django.http import JsonResponse
 
 
@@ -61,6 +61,23 @@ def server_resync(request, server_id):
     if news:
         # only one information object in the data returned
         _sync(server, news[0])
+        wwpns = []
+
+        for port in HbaPort.objects.filter(hba_card__server=server):
+            wwpns.append(port.wwpn)
+
+        for port_info in get_connection_info(wwpns):
+            switch = Switch.objects.get_or_create(
+                ip_addr=port_info.get('SW_IP'),
+                vf_vsan=port_info.get('VSAN'))[0]
+            switch_port = SwitchPort.objects.get_or_create(
+                port_index=port_info.get('Port'),
+                switch=switch)[0]
+            switch.save()
+            switch_port.save()
+            hba_port = HbaPort.objects.get(wwpn=port_info.get('WWPN'))
+            hba_port.connection = switch_port
+            hba_port.save()
         return JsonResponse({'updated': 'true'})
     else:
         return JsonResponse({'updated': 'false'})

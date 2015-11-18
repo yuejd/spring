@@ -21,6 +21,7 @@
           <th>Link Status</th>
           <th>Switch</th>
           <th>Switch Port</th>
+          <th>VF/VSAN</th>
         </tr>
       </thead>
       <tbody>
@@ -33,10 +34,12 @@
           <td>LinkDown</td>
           <td> --- </td>
           <td> --- </td>
+          <td> --- </td>
           {% else %}
           <td>LinkUp</td>
-          <td>{{ port.connection.switch.name }}</td>
+          <td>{{ port.connection.switch.ip_addr }}</td>
           <td>{{ port.connection.port_index }}</td>
+          <td>{{ port.connection.switch.vf_vsan }}</td>
           {% endif %}
         </tr>
           {% endfor %}

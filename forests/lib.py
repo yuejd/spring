@@ -142,7 +142,6 @@ def _nodefind(switch, wwpns):
                 info = o.read().decode('utf-8')
                 if info:
                     temp['SW_IP'] = re.search('\d+(\.\d+){3}', info).group()
-                    temp['SW_USR'] = switch.username
                     connections.append(temp)
 
     return connections
