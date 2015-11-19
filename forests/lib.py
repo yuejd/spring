@@ -24,6 +24,10 @@ def get_server_info(server):
         'type': 'linux',
         'script': 'linux_hba_info.sh',
         })
+    guess.put({
+        'type': 'solaris',
+        'script': 'solaris_hba_info.pl',
+        })
 
     def _get_info(task):
         if task['type'] == 'windows':
@@ -71,10 +75,33 @@ def get_server_info(server):
                     settings.SCRIPTS_DIR,
                     task['script']), 'r').read()
                 )
-            linux_info = o.read()
-            if linux_info:
+            if not e.read():
+                linux_info = o.read()
                 linux_info = linux_info.decode('utf-8').replace(",\n]", "\n]")
                 return json.loads(linux_info)
+
+        elif task['type'] == 'solaris':
+            solaris_sshc = paramiko.client.SSHClient()
+            solaris_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                solaris_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            sc = open(os.path.join(settings.SCRIPTS_DIR, task['script']), 'r').read()
+
+            (i, o, e) = solaris_sshc.exec_command("perl -e '" + sc + " '")
+
+            if not e.read():
+                solaris_info = o.read()
+                return json.loads(solaris_info.decode('utf-8'))
+
         return None
 
     def worker():
