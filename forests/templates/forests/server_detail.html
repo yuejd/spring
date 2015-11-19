@@ -6,8 +6,12 @@
 </div>
 <div class="row">
   <h2>
+		{% if server.team.name %}
     <span class="label label-primary">{{ server.team.name }} Team</span>
+		{% endif %}
+		{% if server.owner.name %}
     <span class="label label-info">{{ server.owner.name }}</span>
+		{% endif %}
   </h2>
 </div>
 <div class="row">
