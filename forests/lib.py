@@ -9,7 +9,6 @@ import re
 from forests.models import Switch
 
 
-
 def get_server_info(server):
     info = []
     guess = queue.Queue()
@@ -98,7 +97,9 @@ def get_server_info(server):
             except:
                 # TODO put the exception detail into log
                 return None
-            sc = open(os.path.join(settings.SCRIPTS_DIR, task['script']), 'r').read()
+            sc = open(
+                os.path.join(settings.SCRIPTS_DIR, task['script']),
+                'r').read()
 
             (i, o, e) = solaris_sshc.exec_command("perl -e '" + sc + " '")
 
@@ -132,7 +133,9 @@ def get_server_info(server):
                         else:
                             active = False
                         wwpn = re.search(r'(?<=:)\w{16}', line).group()
-                        wwpn = ':'.join(a+b for a,b in zip(wwpn[::2], wwpn[1::2]))
+                        wwpn = ':'.join(
+                            a+b for a, b in zip(wwpn[::2], wwpn[1::2])
+                            )
                         temp.append({
                             'ModelDescription': descript,
                             'Active': active,
