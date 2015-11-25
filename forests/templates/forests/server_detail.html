@@ -22,6 +22,7 @@
         <tr>
           <th>WWPN</th>
           <th>Model</th>
+          <th>Model Description</th>
           <th>Link Status</th>
           <th>Switch</th>
           <th>Switch Port</th>
@@ -34,6 +35,7 @@
         <tr>
           <td>{{ port.wwpn }}</td>
           <td>{{ port.hba_card.model }}</td>
+          <td>{{ port.hba_card.description }}</td>
           {% if port.link_down %}
           <td>LinkDown</td>
           <td> --- </td>

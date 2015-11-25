@@ -31,7 +31,8 @@ for (@info_list) {
 	print ",\n";
 
 	print "\"ModelDescription\": ";
-	print "\"\"";
+	$_ =~ /(?<=Manufacturer: )(.+)/;
+	print "\"$1\"";
 	print ",\n";
 
 	print "\"FirmwareVersion\": ";

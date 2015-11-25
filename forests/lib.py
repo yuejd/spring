@@ -9,6 +9,7 @@ import re
 from forests.models import Switch
 
 
+
 def get_server_info(server):
     info = []
     guess = queue.Queue()
@@ -27,6 +28,9 @@ def get_server_info(server):
     guess.put({
         'type': 'solaris',
         'script': 'solaris_hba_info.pl',
+        })
+    guess.put({
+        'type': 'esxi',
         })
 
     def _get_info(task):
@@ -101,6 +105,40 @@ def get_server_info(server):
             if not e.read():
                 solaris_info = o.read()
                 return json.loads(solaris_info.decode('utf-8'))
+
+        elif task['type'] == 'esxi':
+            esxi_sshc = paramiko.client.SSHClient()
+            esxi_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                esxi_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            cmd = "esxcfg-scsidevs -a"
+            (i, o, e) = esxi_sshc.exec_command(cmd)
+            if not e.read():
+                temp = []
+                for line in o.readlines():
+                    if 'fc.' in line:
+                        descript = re.search(r'(?<=\) ).*', line).group()
+                        if 'link-up' in line:
+                            active = True
+                        else:
+                            active = False
+                        wwpn = re.search(r'(?<=:)\w{16}', line).group()
+                        wwpn = ':'.join(a+b for a,b in zip(wwpn[::2], wwpn[1::2]))
+                        temp.append({
+                            'ModelDescription': descript,
+                            'Active': active,
+                            'WWPN': wwpn
+                            })
+                return temp
 
         return None
 

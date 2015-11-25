@@ -34,9 +34,14 @@ def server_resync(request, server_id):
     def _sync(server, data):
         server.hba_set.all().delete()
         for hba_port_info in data:
-            hba = HBA.objects.get_or_create(
-                serial_number=hba_port_info.get('SerialNumber'),
-                server=server)[0]
+            if hba_port_info.get('SerialNumber'):
+                hba = HBA.objects.get_or_create(
+                    serial_number=hba_port_info.get('SerialNumber'),
+                    server=server)[0]
+            else:
+                hba = HBA.objects.get_or_create(
+                    serial_number=hba_port_info.get('ModelDescription'),
+                    server=server)[0]
             hba.description = hba_port_info.get('ModelDescription')
             hba.driver_name = hba_port_info.get('DriverName')
             hba.driver_version = hba_port_info.get('DriverVersion')

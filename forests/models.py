@@ -37,12 +37,12 @@ class SwitchPort(models.Model):
 
 
 class HBA(models.Model):
-    model = models.CharField(max_length=20)
+    model = models.CharField(max_length=20, null=True)
     description = models.CharField(max_length=200, null=True)
     driver_name = models.CharField(max_length=20, null=True)
     driver_version = models.CharField(max_length=20, null=True)
     firmware_version = models.CharField(max_length=20, null=True)
-    serial_number = models.CharField(max_length=50)
+    serial_number = models.CharField(max_length=50, null=True)
     server = models.ForeignKey('Server', default=None)
 
 
