@@ -6,8 +6,12 @@
 </div>
 <div class="row">
   <h2>
+		{% if server.team.name %}
     <span class="label label-primary">{{ server.team.name }} Team</span>
+		{% endif %}
+		{% if server.owner.name %}
     <span class="label label-info">{{ server.owner.name }}</span>
+		{% endif %}
   </h2>
 </div>
 <div class="row">
@@ -18,9 +22,11 @@
         <tr>
           <th>WWPN</th>
           <th>Model</th>
+          <th>Model Description</th>
           <th>Link Status</th>
           <th>Switch</th>
           <th>Switch Port</th>
+          <th>VF/VSAN</th>
         </tr>
       </thead>
       <tbody>
@@ -29,14 +35,17 @@
         <tr>
           <td>{{ port.wwpn }}</td>
           <td>{{ port.hba_card.model }}</td>
+          <td>{{ port.hba_card.description }}</td>
           {% if port.link_down %}
           <td>LinkDown</td>
           <td> --- </td>
           <td> --- </td>
+          <td> --- </td>
           {% else %}
           <td>LinkUp</td>
-          <td>{{ port.connection.switch.name }}</td>
+          <td>{{ port.connection.switch.ip_addr }}</td>
           <td>{{ port.connection.port_index }}</td>
+          <td>{{ port.connection.switch.vf_vsan }}</td>
           {% endif %}
         </tr>
           {% endfor %}
@@ -46,6 +55,35 @@
   </div>
   <div class="pull-right">
     <p>Last Updated: {{ server.updated | date:"Y-m-d H:i:s" }}</p>
+  	<a href="{% url 'server_resync' server.id %}" id="resync">
+			<i class="fa fa-refresh fa-2x pull-right"></i>
+		</a>
   </div>
 </div>
+{% endblock %}
+
+
+{% block js %}
+<script>
+$( document ).ready(function() {
+	$("#resync").click(function(event) {
+		event.preventDefault();
+		var ajax_target = $("#resync").attr('href');
+		$.ajax({
+			url: ajax_target,
+			dataType: 'json',
+			success: function(data){
+				if (data.updated == 'true')
+					location.reload();
+			},
+			beforeSend: function() {
+				$("#resync i:first-child").addClass("fa-spin fa-fw margin-bottom");
+			},
+			complete: function() {
+				$("#resync i:first-child").removeClass("fa-spin fa-fw margin-bottom");
+			}
+		})
+	})
+})
+</script>
 {% endblock %}

@@ -2,15 +2,16 @@ import threading
 import queue
 import winrm
 import json
+import paramiko
+from django.conf import settings
+import os
+import re
+from forests.models import Switch
 
 
 def get_server_info(server):
     info = []
     guess = queue.Queue()
-    # call ansible API to deploy the scripts in the future but now we
-    # assumed that the scripts were already deployed.
-    # maybe we can use a share folder to hold all the scripts and then mount
-    # the folder ready only to the hosts.
     guess.put({
         'type': 'windows',
         'mount_point': 'k',
@@ -21,7 +22,14 @@ def get_server_info(server):
         })
     guess.put({
         'type': 'linux',
-        'script': '/scripts/get_info.py',
+        'script': 'linux_hba_info.sh',
+        })
+    guess.put({
+        'type': 'solaris',
+        'script': 'solaris_hba_info.pl',
+        })
+    guess.put({
+        'type': 'esxi',
         })
 
     def _get_info(task):
@@ -52,8 +60,89 @@ def get_server_info(server):
                 return json.loads(json_str)
 
         elif task['type'] == 'linux':
-            # TODO add paramiko part here!
-            pass
+            linux_sshc = paramiko.client.SSHClient()
+            linux_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                linux_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            (i, o, e) = linux_sshc.exec_command(
+                open(os.path.join(
+                    settings.SCRIPTS_DIR,
+                    task['script']), 'r').read()
+                )
+            linux_info = o.read()
+            if linux_info:
+                linux_info = linux_info.decode('utf-8').replace(",\n]", "\n]")
+                return json.loads(linux_info)
+
+        elif task['type'] == 'solaris':
+            solaris_sshc = paramiko.client.SSHClient()
+            solaris_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                solaris_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            sc = open(
+                os.path.join(settings.SCRIPTS_DIR, task['script']),
+                'r').read()
+
+            (i, o, e) = solaris_sshc.exec_command("perl -e '" + sc + " '")
+
+            if not e.read():
+                solaris_info = o.read()
+                return json.loads(solaris_info.decode('utf-8'))
+
+        elif task['type'] == 'esxi':
+            esxi_sshc = paramiko.client.SSHClient()
+            esxi_sshc.set_missing_host_key_policy(
+                paramiko.client.AutoAddPolicy()
+                )
+            try:
+                esxi_sshc.connect(
+                    server.ip_addr,
+                    username=server.username,
+                    password=server.password
+                    )
+            except:
+                # TODO put the exception detail into log
+                return None
+            cmd = "esxcfg-scsidevs -a"
+            (i, o, e) = esxi_sshc.exec_command(cmd)
+            if not e.read():
+                temp = []
+                for line in o.readlines():
+                    if 'fc.' in line:
+                        descript = re.search(r'(?<=\) ).*', line).group()
+                        if 'link-up' in line:
+                            active = True
+                        else:
+                            active = False
+                        wwpn = re.search(r'(?<=:)\w{16}', line).group()
+                        wwpn = ':'.join(
+                            a+b for a, b in zip(wwpn[::2], wwpn[1::2])
+                            )
+                        temp.append({
+                            'ModelDescription': descript,
+                            'Active': active,
+                            'WWPN': wwpn
+                            })
+                return temp
+
         return None
 
     def worker():
@@ -73,6 +162,89 @@ def get_server_info(server):
     guess.join()
     return info
 
-def get_connection_info(wwpn):
-    # TODO find the connection info for the wwpn
-    pass
+
+def _nodefind(switch, wwpns):
+    connections = []
+    sshc = paramiko.client.SSHClient()
+    sshc.set_missing_host_key_policy(
+        paramiko.client.AutoAddPolicy()
+    )
+    try:
+        sshc.connect(
+            switch.ip_addr,
+            username=switch.username,
+            password=switch.password
+        )
+    except:
+        # TODO put the exception detail into log
+        return None
+
+    if switch.vendor == 'cisco':
+        cmd = "show fcns database detail | grep -B 2 -A 14 "
+        for wwpn in wwpns:
+            (i, o, e) = sshc.exec_command(cmd + wwpn)
+            info = o.read().decode('utf-8')
+            if info:
+                connections.append({
+                    'WWPN': wwpn,
+                    'SW_IP': re.search('(?<=\()\d+(\.\d+){3}', info).group(),
+                    'Port': re.search(r'(?<=:).*(?=\nSwitch)', info).group(),
+                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
+                })
+    elif switch.vendor == 'brocade':
+        cmd = "nodefind "
+        for wwpn in wwpns:
+            (i, o, e) = sshc.exec_command(cmd + wwpn)
+            info = o.read().decode('utf-8')
+            if "No device found" not in info:
+                temp = {
+                    'WWPN': wwpn,
+                    'Port': re.search(r'(?<=Port Index: )\w+', info).group()
+                    }
+                sw_id = re.search(r'\w{2}(?=\w{4};)', info).group()
+                (i, o, e) = sshc.exec_command("switchshow")
+                info = o.read().decode('utf-8')
+                if info:
+                    temp['VSAN'] = re.search(r'(?<=FID: )\d+', info).group()
+                (i, o, e) = sshc.exec_command("fabricshow | grep fffc" + sw_id)
+                info = o.read().decode('utf-8')
+                if info:
+                    temp['SW_IP'] = re.search('\d+(\.\d+){3}', info).group()
+                    connections.append(temp)
+
+    return connections
+
+
+def get_connection_info(wwpns):
+    info = []
+    # ----switch queue setup start
+    switches = queue.Queue()
+
+    for entry in settings.NODEFIND_SCOPE:
+        try:
+            switches.put(
+                Switch.objects.get(
+                    ip_addr=entry.get('ip'),
+                    username=entry.get('username')
+                )
+            )
+        except Switch.DoesNotExist:
+            # TODO add log
+            pass
+
+    # ----switch queue setup done
+
+    def worker():
+        while True:
+            switch = switches.get()
+            for item in _nodefind(switch, wwpns):
+                info.append(item)
+            switches.task_done()
+
+    for x in range(20):
+        t = threading.Thread(target=worker)
+        t.daemon = True
+        t.start()
+
+    switches.join()
+    return info

@@ -23,26 +23,26 @@ class Server(models.Model):
 
 
 class Switch(models.Model):
-    name = models.CharField(max_length=20)
-    vendor = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, null=True)
+    vendor = models.CharField(max_length=20, null=True)
     ip_addr = models.CharField(max_length=15)
     username = models.CharField(max_length=20)
-    password = models.CharField(max_length=20)
+    password = models.CharField(max_length=20, null=True)
+    vf_vsan = models.CharField(max_length=10, null=True)
 
 
 class SwitchPort(models.Model):
     switch = models.ForeignKey('Switch')
-    port_index = models.IntegerField()
-    vf_vsan = models.IntegerField()
+    port_index = models.CharField(max_length=10, null=True)
 
 
 class HBA(models.Model):
-    model = models.CharField(max_length=20)
+    model = models.CharField(max_length=20, null=True)
     description = models.CharField(max_length=200, null=True)
     driver_name = models.CharField(max_length=20, null=True)
     driver_version = models.CharField(max_length=20, null=True)
     firmware_version = models.CharField(max_length=20, null=True)
-    serial_number = models.CharField(max_length=50)
+    serial_number = models.CharField(max_length=50, null=True)
     server = models.ForeignKey('Server', default=None)
 
 
