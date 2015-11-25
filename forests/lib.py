@@ -79,8 +79,8 @@ def get_server_info(server):
                     settings.SCRIPTS_DIR,
                     task['script']), 'r').read()
                 )
-            if not e.read():
-                linux_info = o.read()
+            linux_info = o.read()
+            if linux_info:
                 linux_info = linux_info.decode('utf-8').replace(",\n]", "\n]")
                 return json.loads(linux_info)
 
