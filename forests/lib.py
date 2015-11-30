@@ -185,10 +185,17 @@ def _nodefind(switch, wwpns):
             (i, o, e) = sshc.exec_command(cmd + wwpn)
             info = o.read().decode('utf-8')
             if info:
+                re_port = re.search(
+                    r'(?<=Connected Interface         :).*',
+                    info)
+                if re_port:
+                    re_port = re_port.group()
+                else:
+                    re_port = "Unknown"
                 connections.append({
                     'WWPN': wwpn,
                     'SW_IP': re.search('(?<=\()\d+(\.\d+){3}', info).group(),
-                    'Port': re.search(r'(?<=:).*(?=\nSwitch)', info).group(),
+                    'Port': re_port,
                     'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
                 })
     elif switch.vendor == 'brocade':
