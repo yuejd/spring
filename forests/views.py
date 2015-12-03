@@ -58,19 +58,11 @@ def server_resync(request, server_id):
                 port.link_down = 1
             port.save()
             server.save()
-    try:
-        server = Server.objects.get(pk=server_id)
-    except Server.DoesnotExist:
-        return render(request, '404.html')
-    news = get_server_info(server)
-    if news:
-        # only one information object in the data returned
-        _sync(server, news[0])
-        wwpns = []
 
+    def _connection_sync(server):
+        wwpns = []
         for port in HbaPort.objects.filter(hba_card__server=server):
             wwpns.append(port.wwpn)
-
         for port_info in get_connection_info(wwpns):
             switch = Switch.objects.get_or_create(
                 ip_addr=port_info.get('SW_IP'),
@@ -83,6 +75,21 @@ def server_resync(request, server_id):
             hba_port = HbaPort.objects.get(wwpn=port_info.get('WWPN'))
             hba_port.connection = switch_port
             hba_port.save()
+
+    try:
+        server = Server.objects.get(pk=server_id)
+    except Server.DoesnotExist:
+        return render(request, '404.html')
+    news = get_server_info(server)
+    if news:
+        # only one information object in the data returned
+        _sync(server, news[0])
+        _connection_sync(server)
         return JsonResponse({'updated': 'true'})
     else:
-        return JsonResponse({'updated': 'false'})
+        return JsonResponse(
+            {
+                'updated': 'false',
+                'message': 'Failed to get Server Information',
+            }
+        )
