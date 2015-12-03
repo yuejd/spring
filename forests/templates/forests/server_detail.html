@@ -53,11 +53,15 @@
       </tbody>
     </table>
   </div>
-  <div class="pull-right">
+  <div class="pull-right text-right">
     <p>Last Updated: {{ server.updated | date:"Y-m-d H:i:s" }}</p>
   	<a href="{% url 'server_resync' server.id %}" id="resync">
 			<i class="fa fa-refresh fa-2x pull-right"></i>
 		</a>
+    <br>
+    <br>
+    <div class="alert alert-danger text-right hide" id="ajax-message">
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -75,6 +79,9 @@ $( document ).ready(function() {
 			success: function(data){
 				if (data.updated == 'true')
 					location.reload();
+        else
+          $("#ajax-message").html(data.message);
+          $("#ajax-message").removeClass("hide");
 			},
 			beforeSend: function() {
 				$("#resync i:first-child").addClass("fa-spin fa-fw margin-bottom");
