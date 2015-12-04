@@ -77,12 +77,12 @@ $( document ).ready(function() {
 			url: ajax_target,
 			dataType: 'json',
 			success: function(data){
-				if (data.updated == 'true')
+      if (data.updated == 'true') {
 					location.reload();
-        else
+      } else {
           $("#ajax-message").html(data.message);
           $("#ajax-message").removeClass("hide");
-			},
+      }},
 			beforeSend: function() {
 				$("#resync i:first-child").addClass("fa-spin fa-fw margin-bottom");
 			},

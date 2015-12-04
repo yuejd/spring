@@ -9,11 +9,40 @@ import re
 from forests.models import Switch
 
 
+def _linux_info_process(data):
+    return json.loads(data.decode('utf-8').replace(",\n]", "\n]"))
+
+
+def _esxi_info_process(data):
+    temp = []
+    for line in data.decode('utf-8').split("\n"):
+        if 'fc.' in line:
+            descript = re.search(r'(?<=\) ).*', line).group()
+            if 'link-up' in line:
+                active = True
+            else:
+                active = False
+            wwpn = re.search(r'(?<=:)\w{16}', line).group()
+            wwpn = ':'.join(
+                a+b for a, b in zip(wwpn[::2], wwpn[1::2])
+                )
+            temp.append({
+                'ModelDescription': descript,
+                'Active': active,
+                'WWPN': wwpn
+                })
+    return temp
+
+
+def _solaris_info_process(data):
+    return json.loads(data.decode('utf-8'))
+
+
 def get_server_info(server):
     info = []
     guess = queue.Queue()
     guess.put({
-        'type': 'windows',
+        'type': 'winrm',
         'mount_point': 'k',
         'shared': '\\\\10.103.118.1\\linux\\NWC\\script\\windows',
         'shared_usr': 'linux',
@@ -21,19 +50,25 @@ def get_server_info(server):
         'script': 'Get-HBAWin.ps1'
         })
     guess.put({
-        'type': 'linux',
+        'type': 'ssh',
+        'cmd_template': "{}",
         'script': 'linux_hba_info.sh',
+        'success': _linux_info_process,
         })
     guess.put({
-        'type': 'solaris',
+        'type': 'ssh',
+        'cmd_template': "perl -e '{} '",
         'script': 'solaris_hba_info.pl',
+        'success': _solaris_info_process,
         })
     guess.put({
-        'type': 'esxi',
+        'type': 'ssh',
+        'cmd_template': "esxcfg-scsidevs -a",
+        'success': _esxi_info_process,
         })
 
     def _get_info(task):
-        if task['type'] == 'windows':
+        if task['type'] == 'winrm':
             s = winrm.Session(
                 server.ip_addr,
                 auth=(server.username, server.password)
@@ -59,91 +94,38 @@ def get_server_info(server):
                 json_str = json_str.replace("\'b\'", "")
                 return json.loads(json_str)
 
-        elif task['type'] == 'linux':
-            linux_sshc = paramiko.client.SSHClient()
-            linux_sshc.set_missing_host_key_policy(
+        elif task['type'] == 'ssh':
+            ssh_client = paramiko.client.SSHClient()
+            ssh_client.set_missing_host_key_policy(
                 paramiko.client.AutoAddPolicy()
                 )
             try:
-                linux_sshc.connect(
+                ssh_client.connect(
                     server.ip_addr,
                     username=server.username,
-                    password=server.password
+                    password=server.password,
+                    timeout=20
                     )
             except:
                 # TODO put the exception detail into log
                 return None
-            (i, o, e) = linux_sshc.exec_command(
-                open(os.path.join(
-                    settings.SCRIPTS_DIR,
-                    task['script']), 'r').read()
-                )
-            linux_info = o.read()
-            if linux_info:
-                linux_info = linux_info.decode('utf-8').replace(",\n]", "\n]")
-                return json.loads(linux_info)
 
-        elif task['type'] == 'solaris':
-            solaris_sshc = paramiko.client.SSHClient()
-            solaris_sshc.set_missing_host_key_policy(
-                paramiko.client.AutoAddPolicy()
+            if task.get('script'):
+                cmd = task['cmd_template'].format(
+                    open(
+                        os.path.join(settings.SCRIPTS_DIR, task['script']),
+                        'r'
+                    ).read()
                 )
-            try:
-                solaris_sshc.connect(
-                    server.ip_addr,
-                    username=server.username,
-                    password=server.password
-                    )
-            except:
-                # TODO put the exception detail into log
+            else:
+                cmd = task['cmd_template']
+
+            (i, o, e) = ssh_client.exec_command(cmd)
+            data = o.read()
+            if data:
+                return task['success'](data)
+            else:
                 return None
-            sc = open(
-                os.path.join(settings.SCRIPTS_DIR, task['script']),
-                'r').read()
-
-            (i, o, e) = solaris_sshc.exec_command("perl -e '" + sc + " '")
-
-            if not e.read():
-                solaris_info = o.read()
-                return json.loads(solaris_info.decode('utf-8'))
-
-        elif task['type'] == 'esxi':
-            esxi_sshc = paramiko.client.SSHClient()
-            esxi_sshc.set_missing_host_key_policy(
-                paramiko.client.AutoAddPolicy()
-                )
-            try:
-                esxi_sshc.connect(
-                    server.ip_addr,
-                    username=server.username,
-                    password=server.password
-                    )
-            except:
-                # TODO put the exception detail into log
-                return None
-            cmd = "esxcfg-scsidevs -a"
-            (i, o, e) = esxi_sshc.exec_command(cmd)
-            if not e.read():
-                temp = []
-                for line in o.readlines():
-                    if 'fc.' in line:
-                        descript = re.search(r'(?<=\) ).*', line).group()
-                        if 'link-up' in line:
-                            active = True
-                        else:
-                            active = False
-                        wwpn = re.search(r'(?<=:)\w{16}', line).group()
-                        wwpn = ':'.join(
-                            a+b for a, b in zip(wwpn[::2], wwpn[1::2])
-                            )
-                        temp.append({
-                            'ModelDescription': descript,
-                            'Active': active,
-                            'WWPN': wwpn
-                            })
-                return temp
-
-        return None
 
     def worker():
         while True:
@@ -160,7 +142,11 @@ def get_server_info(server):
         t.start()
 
     guess.join()
-    return info
+
+    if len(info) == 1:
+        return info[0]
+    else:
+        return []
 
 
 def _nodefind(switch, wwpns):

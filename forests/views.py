@@ -31,9 +31,14 @@ class ServerDetail(View):
 
 
 def server_resync(request, server_id):
-    def _sync(server, data):
+    def _hba_sync(server):
+        info_list = get_server_info(server)
+
+        if not info_list:
+            return False
+
         server.hba_set.all().delete()
-        for hba_port_info in data:
+        for hba_port_info in info_list:
             if hba_port_info.get('SerialNumber'):
                 hba = HBA.objects.get_or_create(
                     serial_number=hba_port_info.get('SerialNumber'),
@@ -59,11 +64,19 @@ def server_resync(request, server_id):
             port.save()
             server.save()
 
+        return True
+
     def _connection_sync(server):
         wwpns = []
         for port in HbaPort.objects.filter(hba_card__server=server):
             wwpns.append(port.wwpn)
-        for port_info in get_connection_info(wwpns):
+
+        port_info_list = get_connection_info(wwpns)
+
+        if not port_info_list:
+            return False
+
+        for port_info in port_info_list:
             switch = Switch.objects.get_or_create(
                 ip_addr=port_info.get('SW_IP'),
                 vf_vsan=port_info.get('VSAN'))[0]
@@ -76,14 +89,14 @@ def server_resync(request, server_id):
             hba_port.connection = switch_port
             hba_port.save()
 
+        return True
+
     try:
         server = Server.objects.get(pk=server_id)
     except Server.DoesnotExist:
         return render(request, '404.html')
-    news = get_server_info(server)
-    if news:
-        # only one information object in the data returned
-        _sync(server, news[0])
+
+    if _hba_sync(server):
         _connection_sync(server)
         return JsonResponse({'updated': 'true'})
     else:
