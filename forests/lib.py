@@ -160,7 +160,11 @@ def get_server_info(server):
         t.start()
 
     guess.join()
-    return info
+
+    if len(info) == 1:
+        return info[0]
+    else:
+        return []
 
 
 def _nodefind(switch, wwpns):
