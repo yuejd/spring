@@ -16,8 +16,10 @@ Including another URLconf
 from forests import server_urls
 from django.conf.urls import include, url
 from django.contrib import admin
+from forests.views import server_list
 
 urlpatterns = [
+    url(r'^$', server_list),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^server/', include(server_urls)),
 ]
