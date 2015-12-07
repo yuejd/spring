@@ -8,6 +8,8 @@ import os
 import re
 from forests.models import Switch
 
+TIMEOUT = 10
+
 
 def _linux_info_process(data):
     return json.loads(data.decode('utf-8').replace(",\n]", "\n]"))
@@ -73,6 +75,7 @@ def get_server_info(server):
                 server.ip_addr,
                 auth=(server.username, server.password)
                 )
+            s.protocol.transport.timeout = TIMEOUT
             try:
                 # mount and execute the script
                 # do not split these two actions cause the mount is only
@@ -104,7 +107,7 @@ def get_server_info(server):
                     server.ip_addr,
                     username=server.username,
                     password=server.password,
-                    timeout=20
+                    timeout=TIMEOUT
                     )
             except:
                 # TODO put the exception detail into log
@@ -136,7 +139,7 @@ def get_server_info(server):
                 info.append(new_info.res)
             guess.task_done()
 
-    for x in range(2):
+    for x in range(10):
         t = threading.Thread(target=worker)
         t.daemon = True
         t.start()
