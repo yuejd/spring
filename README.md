@@ -1,5 +1,4 @@
 #Spring
---------------------------
 This is a internal system used to collect the information of the SAN network in the lab.
 
 ##Main feature:
@@ -11,5 +10,6 @@ This is a internal system used to collect the information of the SAN network in 
 ##Screenshot:
 
 ![screenshot](https://github.com/humw/spring/raw/develop/screenshot/server_list)
+--------------------------
 ![screenshot](https://github.com/humw/spring/raw/develop/screenshot/server_detail)
 
