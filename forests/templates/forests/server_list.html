@@ -32,7 +32,7 @@ $(document).ready(function() {
 	$('input:first').on( 'keyup', function () {
 		var term = $(this).val();
 			$('#server_list').DataTable().search(
-				'\\b' + term + '\\b',
+				term,
 				true
 			).draw();
 	});
