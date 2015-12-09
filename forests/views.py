@@ -3,6 +3,7 @@ from forests.models import Server, HBA, HbaPort, Switch, SwitchPort
 from django.views.generic import View
 from forests.lib import get_server_info, get_connection_info
 from django.http import JsonResponse
+from django.views.generic.detail import DetailView
 
 
 def server_list(request):
@@ -106,3 +107,17 @@ def server_resync(request, server_id):
                 'message': 'Failed to get Server Information',
             }
         )
+
+
+class SWPortDetail(DetailView):
+
+    model = SwitchPort
+
+    def get_object(self):
+        switch_id = self.kwargs.get('switch_id')
+        port_index = self.kwargs.get('port_index')
+        try:
+            switch = Switch.objects.get(pk=switch_id)
+            return SwitchPort.objects.get(switch=switch, port_index=port_index)
+        except:
+            return None

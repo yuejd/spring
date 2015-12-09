@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="jumbotron">
+	<h1>Port {{ object.port_index }}</h1>
+  <p>This port belongs to Switch: </p>
+  <div class="well well-sm">{{ object.switch.name }}</div>
+ 	<div class="btn-group btn-group-justified" role="group" aria-label="Justified button group">
+		<a href="#" class="btn btn-info" role="button">Show Current Status</a>
+		<a href="#" class="btn btn-danger" role="button">Disable This Port</a>
+		<a href="#" class="btn btn-success" role="button">Enable This Port</a>
+	</div>
+</div>
+{% endblock %}
+{% block js %}
+{% endblock %}
