@@ -4,8 +4,13 @@ from forests import views
 
 urlpatterns = [
     url(
-        r'^(?P<switch_id>[0-9]+)/port/(?P<port_index>[0-9]+)$',
+        r'^(?P<pk>[0-9]+)$',
         views.SWPortDetail.as_view(),
         name='switch_port_detail'
+    ),
+    url(
+        r'^(?P<pk>[0-9]+)/(?P<action>\w+)$',
+        views.SWPortAction.as_view(),
+        name='switch_port_action'
     ),
 ]

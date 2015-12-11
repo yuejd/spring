@@ -4,12 +4,39 @@
 	<h1>Port {{ object.port_index }}</h1>
   <p>This port belongs to Switch: </p>
   <div class="well well-sm">{{ object.switch.name }}</div>
- 	<div class="btn-group btn-group-justified" role="group" aria-label="Justified button group">
-		<a href="#" class="btn btn-info" role="button">Show Current Status</a>
+ 	<div class="btn-group btn-group-justified" role="group" aria-label="Justified
+    button group" id="btns">
+    <a href="{% url 'switch_port_action' object.id 'show' %}" class="btn btn-info" role="button" id="show">Show Current Status</a>
 		<a href="#" class="btn btn-danger" role="button">Disable This Port</a>
 		<a href="#" class="btn btn-success" role="button">Enable This Port</a>
 	</div>
+  <div id="result">
+  </div>
 </div>
 {% endblock %}
 {% block js %}
+<script>
+$( document ).ready(function() {
+	$("#show").click(function(event) {
+		event.preventDefault();
+		var ajax_target = $("#show").attr('href');
+		$.ajax({
+			url: ajax_target,
+			dataType: 'json',
+			success: function(data){
+        $("#result").html(data.message);
+      },
+			beforeSend: function() {
+        $("a.btn").hide();
+        $("#btns").append('<div class="progress"> <div class="progress-bar progress-bar-info progress-bar-striped active" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width:100%"></div></div>');
+			},
+			complete: function() {
+        $("div.progress").remove();
+        $("a.btn").show();
+			}
+		})
+  })
+})
+</script>
+
 {% endblock %}

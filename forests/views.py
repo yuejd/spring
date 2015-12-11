@@ -4,6 +4,8 @@ from django.views.generic import View
 from forests.lib import get_server_info, get_connection_info
 from django.http import JsonResponse
 from django.views.generic.detail import DetailView
+import paramiko
+from jinja2 import Template
 
 
 def server_list(request):
@@ -113,11 +115,76 @@ class SWPortDetail(DetailView):
 
     model = SwitchPort
 
-    def get_object(self):
-        switch_id = self.kwargs.get('switch_id')
-        port_index = self.kwargs.get('port_index')
+
+class SWPortAction(View):
+
+    def message_generator(self, template, data):
+        template = Template(template)
+        return template.render(data=data)
+
+    def make_connection(self):
+        port_id = self.kwargs.get('pk')
         try:
-            switch = Switch.objects.get(pk=switch_id)
-            return SwitchPort.objects.get(switch=switch, port_index=port_index)
+            port = SwitchPort.objects.get(pk=port_id)
         except:
             return None
+        ssh_client = paramiko.client.SSHClient()
+        ssh_client.set_missing_host_key_policy(
+            paramiko.client.AutoAddPolicy()
+            )
+        try:
+            ssh_client.connect(
+                port.switch.ip_addr,
+                username=port.switch.username,
+                password=port.switch.password,
+                timeout=20
+                )
+        except:
+            return None
+        self.connection = ssh_client
+        self.port = port
+        self.switch = port.switch
+        return True
+
+    def get(self, request, *args, **kwargs):
+        if self.kwargs.get('action') == 'show':
+            if not self.make_connection():
+                return JsonResponse(
+                    {
+                        'status': 'unknown',
+                        'message': 'Failed to establist connections to the \
+                        Switch',
+                    })
+            if self.switch.vendor == 'brocade':
+                # TODO finish this part after url rules change
+                (i, o, e) = self.connection.exec_command(
+                    'portshow ' + self.port.port_index)
+            elif self.switch.vendor == 'cisco':
+                (i, o, e) = self.connection.exec_command(
+                    'show interface ' + self.port.port_index)
+            else:
+                return JsonResponse(
+                    {
+                        'status': 'unknown',
+                        'message': 'Unknown Switch vendor',
+                    }
+                )
+            data = o.read().decode('utf-8').split("\n")
+            template = """
+               <br>
+               <br>
+               {% for item in data %}
+                 <p class="text-info">{{ item }} </p>
+               {% endfor %}
+               """
+
+            return JsonResponse(
+                {
+                    'status': 'ok',
+                    'message': self.message_generator(template, data),
+                }
+            )
+
+        else:
+            # TODO unsupported action
+            pass
