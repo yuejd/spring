@@ -86,6 +86,9 @@ def server_resync(request, server_id):
             switch = Switch.objects.get_or_create(
                 ip_addr=port_info.get('SW_IP'),
                 vf_vsan=port_info.get('VSAN'))[0]
+            switch.username = port_info.get('SW_USR')
+            switch.password = port_info.get('SW_PSW')
+            switch.vendor = port_info.get('SW_VDR')
             switch_port = SwitchPort.objects.get_or_create(
                 port_index=port_info.get('Port'),
                 switch=switch)[0]

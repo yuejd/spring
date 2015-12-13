@@ -3,7 +3,7 @@
 <div class="jumbotron">
 	<h1>Port {{ object.port_index }}</h1>
   <p>This port belongs to Switch: </p>
-  <div class="well well-sm">{{ object.switch.name }}</div>
+  <div class="well well-sm">{{ object.switch.ip_addr }}</div>
  	<div class="btn-group btn-group-justified" role="group" aria-label="Justified
     button group" id="btns">
     <a href="{% url 'switch_port_action' object.id 'show' %}" class="btn btn-info" role="button" id="show">Show Current Status</a>

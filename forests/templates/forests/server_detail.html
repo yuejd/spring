@@ -44,7 +44,7 @@
           {% else %}
           <td>LinkUp</td>
           <td>{{ port.connection.switch.ip_addr }}</td>
-          <td>{{ port.connection.port_index }}</td>
+          <td><a href="{% url 'switch_port_detail' port.connection.id %}">{{ port.connection.port_index }}</td>
           <td>{{ port.connection.switch.vf_vsan }}</td>
           {% endif %}
         </tr>
