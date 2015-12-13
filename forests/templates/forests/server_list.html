@@ -27,6 +27,16 @@
 {% endblock %}
 {% block js %}
 <script>
-$('#server_list').DataTable();
+$(document).ready(function() {
+	$('#server_list').DataTable();
+	$('input:first').on( 'keyup', function () {
+		var term = $(this).val();
+			$('#server_list').DataTable().search(
+				term,
+				true
+			).draw();
+	});
+});
+
 </script>
 {% endblock %}

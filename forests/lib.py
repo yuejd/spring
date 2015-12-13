@@ -8,6 +8,8 @@ import os
 import re
 from forests.models import Switch
 
+TIMEOUT = 10
+
 
 def _linux_info_process(data):
     return json.loads(data.decode('utf-8').replace(",\n]", "\n]"))
@@ -73,6 +75,7 @@ def get_server_info(server):
                 server.ip_addr,
                 auth=(server.username, server.password)
                 )
+            s.protocol.transport.timeout = TIMEOUT
             try:
                 # mount and execute the script
                 # do not split these two actions cause the mount is only
@@ -104,7 +107,7 @@ def get_server_info(server):
                     server.ip_addr,
                     username=server.username,
                     password=server.password,
-                    timeout=20
+                    timeout=TIMEOUT
                     )
             except:
                 # TODO put the exception detail into log
@@ -136,7 +139,7 @@ def get_server_info(server):
                 info.append(new_info.res)
             guess.task_done()
 
-    for x in range(2):
+    for x in range(10):
         t = threading.Thread(target=worker)
         t.daemon = True
         t.start()
@@ -182,7 +185,10 @@ def _nodefind(switch, wwpns):
                     'WWPN': wwpn,
                     'SW_IP': re.search('(?<=\()\d+(\.\d+){3}', info).group(),
                     'Port': re_port,
-                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
+                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group(),
+                    'SW_USR': switch.username,
+                    'SW_PSW': switch.password,
+                    'SW_VDR': switch.vendor,
                 })
     elif switch.vendor == 'brocade':
         cmd = "nodefind "
@@ -192,7 +198,10 @@ def _nodefind(switch, wwpns):
             if "No device found" not in info:
                 temp = {
                     'WWPN': wwpn,
-                    'Port': re.search(r'(?<=Port Index: )\w+', info).group()
+                    'Port': re.search(r'(?<=Port Index: )\w+', info).group(),
+                    'SW_USR': switch.username,
+                    'SW_PSW': switch.password,
+                    'SW_VDR': switch.vendor,
                     }
                 sw_id = re.search(r'\w{2}(?=\w{4};)', info).group()
                 (i, o, e) = sshc.exec_command("switchshow")
