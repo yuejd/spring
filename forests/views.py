@@ -6,6 +6,9 @@ from django.http import JsonResponse
 from django.views.generic.detail import DetailView
 import paramiko
 from jinja2 import Template
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+import time
 
 
 def server_list(request):
@@ -115,12 +118,16 @@ class SWPortDetail(DetailView):
 
     model = SwitchPort
 
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, *args, **kwargs):
+        return super(SWPortDetail, self).dispatch(*args, **kwargs)
+
 
 class SWPortAction(View):
 
     def message_generator(self, template, data):
         template = Template(template)
-        return template.render(data=data)
+        return template.render(data=data.decode('utf-8').split("\n"))
 
     def make_connection(self):
         port_id = self.kwargs.get('pk')
@@ -147,44 +154,82 @@ class SWPortAction(View):
         return True
 
     def get(self, request, *args, **kwargs):
-        if self.kwargs.get('action') == 'show':
-            if not self.make_connection():
-                return JsonResponse(
-                    {
-                        'status': 'unknown',
-                        'message': 'Failed to establist connections to the \
-                        Switch',
-                    })
-            if self.switch.vendor == 'brocade':
-                # TODO finish this part after url rules change
-                (i, o, e) = self.connection.exec_command(
-                    'portshow ' + self.port.port_index)
-            elif self.switch.vendor == 'cisco':
-                (i, o, e) = self.connection.exec_command(
-                    'show interface ' + self.port.port_index)
-            else:
-                return JsonResponse(
-                    {
-                        'status': 'unknown',
-                        'message': 'Unknown Switch vendor',
-                    }
-                )
-            data = o.read().decode('utf-8').split("\n")
-            template = """
-               <br>
-               <br>
-               {% for item in data %}
-                 <p class="text-info">{{ item }} </p>
-               {% endfor %}
-               """
 
+        if not self.make_connection():
             return JsonResponse(
                 {
-                    'status': 'ok',
-                    'message': self.message_generator(template, data),
+                    'status': 'unknown',
+                    'message': 'Failed to establist connections to the \
+                    Switch',
+                })
+
+        cmds = []
+        sleep_time = 5
+
+        if self.kwargs.get('action') == 'show':
+            sleep_time = 0
+            pass
+
+        elif self.kwargs.get('action') == 'disable':
+            if self.switch.vendor == 'brocade':
+                cmds.append(
+                    'portdisable ' + self.port.port_index + ' && echo "Done"'
+                )
+            elif self.switch.vendor == 'cisco':
+                cmds.append('configure')
+                cmds.append('interface ' + self.port.port_index)
+                cmds.append('shutdown')
+
+        elif self.kwargs.get('action') == 'enable':
+            if self.switch.vendor == 'brocade':
+                cmds.append(
+                    'portenable ' + self.port.port_index + ' && echo "Done"'
+                )
+            elif self.switch.vendor == 'cisco':
+                cmds.append('configure')
+                cmds.append('interface ' + self.port.port_index)
+                cmds.append('no shutdown')
+
+        else:
+            return JsonResponse(
+                {
+                    'status': 'unknown',
+                    'message': 'Unknown Switch vendor or Invalid action',
                 }
             )
 
-        else:
-            # TODO unsupported action
-            pass
+        try:
+            chan = self.connection.invoke_shell()
+        except:
+            return JsonResponse(
+                {
+                    'status': 'unknown',
+                    'message': 'Unable to invoke shell on the connections',
+                }
+            )
+
+        for cmd in cmds:
+            chan.send(cmd + "\n")
+
+        # sleep a few seconds here to wait for the switch finishing its job
+        time.sleep(sleep_time)
+        if self.switch.vendor == 'brocade':
+            result = self.connection.exec_command(
+                'portshow ' + self.port.port_index)[1].read()
+        elif self.switch.vendor == 'cisco':
+            result = self.connection.exec_command(
+                'show interface ' + self.port.port_index)[1].read()
+        template = """
+           <br>
+           <br>
+           {% for item in data %}
+             <p class="text-info">{{ item }} </p>
+           {% endfor %}
+           """
+
+        return JsonResponse(
+            {
+                'status': 'ok',
+                'message': self.message_generator(template, result),
+            }
+        )
