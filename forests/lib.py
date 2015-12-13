@@ -185,7 +185,10 @@ def _nodefind(switch, wwpns):
                     'WWPN': wwpn,
                     'SW_IP': re.search('(?<=\()\d+(\.\d+){3}', info).group(),
                     'Port': re_port,
-                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group()
+                    'VSAN': re.search(r'(?<=VSAN:)\d+', info).group(),
+                    'SW_USR': switch.username,
+                    'SW_PSW': switch.password,
+                    'SW_VDR': switch.vendor,
                 })
     elif switch.vendor == 'brocade':
         cmd = "nodefind "
@@ -195,7 +198,10 @@ def _nodefind(switch, wwpns):
             if "No device found" not in info:
                 temp = {
                     'WWPN': wwpn,
-                    'Port': re.search(r'(?<=Port Index: )\w+', info).group()
+                    'Port': re.search(r'(?<=Port Index: )\w+', info).group(),
+                    'SW_USR': switch.username,
+                    'SW_PSW': switch.password,
+                    'SW_VDR': switch.vendor,
                     }
                 sw_id = re.search(r'\w{2}(?=\w{4};)', info).group()
                 (i, o, e) = sshc.exec_command("switchshow")
