@@ -39,6 +39,39 @@ def _esxi_info_process(data):
 def _solaris_info_process(data):
     return json.loads(data.decode('utf-8'))
 
+def _hp_info_process(data):
+    rtn = []
+    lines = data.decode("utf-8").splitlines()
+    lines_num = len(lines)
+    for i in range(lines_num):
+        lines[i] = lines[i].strip().strip('"')
+    for i in range(int(lines_num / 5)):
+        i=i*5
+        wwn = lines[i][2:]
+        rtn.append({
+            "WWPN" : ":".join([x+y for x, y in zip(wwn[::2], wwn[1::2])]),
+            "Active" : True if "ONLINE" in lines[i+1] else False,
+            "ModelDescription" : lines[i+2],
+            "SerialNumber" : lines[i+3],
+            "FirmwareVersion" : lines[i+4],
+            "Model" : "HP"
+        })
+    return rtn
+
+def _aix_info_process(data):
+    rtn = []
+    lines = data.decode("utf-8").splitlines()
+    lines_num = len(lines)
+    for i in range(int(lines_num / 2)):
+        i = i *2
+        wwn = lines[i]
+        rtn.append({
+            "WWPN" : ":".join([x+y for x, y in zip(wwn[::2], wwn[1::2])]).lower(),
+            "Active" : True,
+            "ModelDescription" : lines[i+1]
+            })
+    return rtn
+
 
 def get_server_info(server):
     info = []
@@ -67,6 +100,21 @@ def get_server_info(server):
         'type': 'ssh',
         'cmd_template': "esxcfg-scsidevs -a",
         'success': _esxi_info_process,
+        })
+    # for hp
+    guess.put({
+        "type": "ssh",
+        "cmd_template": "{}",
+        "script": "hp_hba_info.sh",
+        "success": _hp_info_process,
+        })
+
+    # for aix
+    guess.put({
+        "type": "ssh",
+        "cmd_template": "{}",
+        "script": "aix_hba_info.sh",
+        "success": _aix_info_process,
         })
 
     def _get_info(task):
